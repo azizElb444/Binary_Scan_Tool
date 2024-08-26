@@ -1,0 +1,60 @@
+rules:
+  - id: potential-malicious-activity-in-java-code
+    pattern-either:
+      # Detect potential command execution
+      - pattern: Runtime.getRuntime().exec($CMD)
+      - pattern: new ProcessBuilder(...).start()
+      - pattern: new ProcessBuilder(...).redirectErrorStream(...).start()
+      - pattern: $PB.start()
+      - pattern: $PB.redirectErrorStream($BOOL).start()
+      
+      # Detect potential network connections
+      - pattern: new Socket($HOST, $PORT)
+      - pattern: SocketChannel.open()
+      
+      # Detect potential file operations
+      - pattern: new FileOutputStream($FILE)
+      - pattern: new FileWriter($FILE)
+      - pattern: Files.write($PATH, ...)
+      - pattern: Files.delete($PATH)
+      
+      # Detect potential dynamic class loading
+      - pattern: ClassLoader.loadClass($CLASS)
+      - pattern: URLClassLoader.newInstance($URLS)
+      
+      # Detect potential use of encryption functions (could be for obfuscation)
+      - pattern-regex: (encrypt|decrypt|digest|sign)\s*\(.*\)
+      
+      # Detect potential use of base64 encoding/decoding
+      - pattern: Base64.getEncoder().encode(...)
+      - pattern: Base64.getDecoder().decode(...)
+      
+      # Detect potential use of reflection (often used in malicious code)
+      - pattern: Class.forName($CLASS)
+      - pattern: $OBJ.getClass().getDeclaredMethod($METHOD)
+      
+      # Detect potential use of native methods (could be used to bypass Java security)
+      - pattern: native $TYPE $METHOD(...)
+      
+      # Detect potential use of System.exit (could be used to abruptly terminate the program)
+      - pattern: System.exit($CODE)
+
+    message: >
+      Potential malicious activity detected in Java code. 
+      This could indicate attempts at command execution, network connections, 
+      file operations, dynamic class loading, reflection, or data obfuscation.
+      Please review the code carefully for any unauthorized or suspicious behavior.
+    languages: 
+      - java
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe: 
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+        - "CWE-94: Improper Control of Generation of Code"
+        - "CWE-470: Use of Externally-Controlled Input to Select Classes or Code ('Unsafe Reflection')"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH

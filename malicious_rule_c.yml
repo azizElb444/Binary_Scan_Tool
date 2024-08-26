@@ -1,0 +1,55 @@
+rules:
+  - id: potential-malicious-activity-in-c-code
+    pattern-either:
+      # Detect potential command execution
+      - pattern: system($CMD)
+      - pattern: execl($PATH, ...)
+      - pattern: execle($PATH, ...)
+      - pattern: execlp($FILE, ...)
+      - pattern: execv($PATH, ...)
+      - pattern: execve($PATH, ...)
+      - pattern: execvp($FILE, ...)
+      
+      # Detect potential network connections
+      - pattern: socket($AF, $TYPE, $PROTOCOL)
+      - pattern: connect($SOCKFD, $ADDR, $ADDRLEN)
+      
+      # Detect potential file operations
+      - pattern: fopen($FILENAME, "w")
+      - pattern: remove($FILENAME)
+      
+      # Detect potential dynamic library loading
+      - pattern: dlopen($FILENAME, $FLAG)
+      
+      # Detect potential use of encryption functions (could be for obfuscation)
+      - pattern-regex: (encrypt|decrypt|md5|sha1|sha256)\s*\(.*\)
+      
+      # Detect potential use of base64 encoding/decoding
+      - pattern: |
+          char* $FUNC(const char* input) {
+            ...
+            while (...) {
+              ...
+              $OUT = (($IN >> 2) & 0x3F);
+              ...
+            }
+            ...
+          }
+    message: >
+      Potential malicious activity detected in C code. 
+      This could indicate attempts at command execution, network connections, 
+      file operations, dynamic library loading, or data obfuscation.
+      Please review the code carefully for any unauthorized or suspicious behavior.
+    languages: 
+      - c
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe: 
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+        - "CWE-94: Improper Control of Generation of Code"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
